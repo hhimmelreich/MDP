@@ -10,7 +10,7 @@ import random
 class Playing_field:
     
     # constructor
-    def __init__(self, field, gamma = 0.5, ev_number = 1, error = 0.2):
+    def __init__(self, field, gamma = 1, ev_number = 20, error = 0.2):
         self._field = field
         self._policy = Playing_field.generate_random_policy(len(field), len(field[0]))
         self._values = numpy.zeros((len(field), len(field[0])))
@@ -19,7 +19,7 @@ class Playing_field:
         self._error = error
         self._goal_reward = 1
         self._pitfall_reward = -1
-        self._standard_reward = 0.042
+        self._standard_reward = -0.04
     
     # getters
     def get_field(self):
@@ -78,8 +78,8 @@ class Playing_field:
     policy entry, sets policy as best(maximal) one.
     '''    
     def update_policy(self):
-        for y in range(len(self._field)):
-            for x in range(len(self._field[0])):
+        for x in range(len(self._field)):
+            for y in range(len(self._field[0])):
                 # evaluate different policy option
                 up = self.evaluate(x, y, [0,-1])
                 down = self.evaluate(x, y, [0,1]) 
@@ -125,11 +125,11 @@ class Playing_field:
     gives back the reward for moving on a specific field
     '''
     def reward_funct(self, x, y):
-        if self._field[x][y] == "G":
+        if self._field[x][y] == "E":
             return self._goal_reward
         elif self._field[x][y] == "P":
             return self._pitfall_reward
-        elif self._field[x][y] == "E":
+        elif self._field[x][y] == "F":
             return self._standard_reward
         else:
             return 0
@@ -139,36 +139,77 @@ class Playing_field:
     iterates through playing field, adjusts values according to policy
     '''    
     def update_values(self):
-        new_values = numpy.empty([len(self._field), len(self._field[0])])
-        for y in range(len(self._field)):
-            for x in range(len(self._field[0])):
-                new_values[x][y] = self.evaluate(x, y, self._policy[x][y])
+        new_values = numpy.zeros([len(self._field), len(self._field[0])])
+        for x in range(len(self._field)):
+            for y in range(len(self._field[0])):
+                if self._field[x][y] == "F":
+                    
+                    new_values[x][y] = self.evaluate(x, y, self._policy[x][y])
+                elif self._field[x][y] == "E":
+                    new_values[x][y] = self._goal_reward
+                elif self._field[x][y] == "P":
+                    new_values[x][y] = self._pitfall_reward
         self._values = new_values
      
     '''
     prints playing field
     '''    
     def print_field(self):
-        # printing playing field
-        for y in range (len(self._field)):
-            print(self._field[y])
-        # printing values
-        for y in range (len(self._values)):
-            print(self._values[y])
+        policy = numpy.empty([len(self._field), len(self._field[0])], dtype=object)
+        for x in range (len(self._field)):
+            for y in range (len(self._field[0])):
+                if self._field[x][y] == "E":
+                    policy[x][y] = "E    "
+                elif self._field[x][y] == "P":
+                    policy[x][y] = "P    "
+                elif self._field[x][y] == "O":
+                    policy[x][y] = "O    "
+                elif self._policy[x][y] == [-1, 0]:
+                    policy[x][y] = "up   "
+                elif self._policy[x][y] == [1, 0]:
+                    policy[x][y] = "down "
+                elif self._policy[x][y] == [0, 1]:
+                    policy[x][y] = "right"
+                elif self._policy[x][y] == [0, -1]:
+                    policy[x][y] = "left "
+        
         # printing policy
-        for y in range (len(self._policy)):
-            print(self._policy[y])
+        print("Policy:")
+        for y in range (len(policy)):
+            print(policy[y])
+        print("")
+        
+        values = numpy.empty([len(self._field), len(self._field[0])], dtype=object)
+        for x in range (len(self._field)):
+            for y in range (len(self._field[0])):
+                if self._field[x][y] == "O":
+                   values[x][y] = "O"
+                else:
+                    #values[x][y] = round(float(self._values[x][y]), 3)
+                    values[x][y] = self._values[x][y]
+        
+        # printing values
+        print("Values:")
+        for x in range (len(self._values)):
+            print("[", end="")
+            for y in range (len(self._values[0])):
+                #print(values[y])
+                if self._field[x][y] == "O":
+                    print(" X    ", end=" ")
+                else:
+                    print("%6.3f"% (values[x][y]), end=" ")
+            print("]")
+        print("")
+
     
     '''
     performs one iteration of evaluating the current policy and choosing a new one
     '''    
     def step(self):
+        self._values = numpy.zeros([len(self._values), len(self._values[0])])
         for x in range(self._ev_number):
             Playing_field.update_values(self)
         self.update_policy()
-        
-    def test(self):
-        print("test successfull")
     
     '''
     takes a direction as input and gives back the neighbours, represented as change
@@ -192,12 +233,21 @@ class Playing_field:
             # down, up
             return [[0,1], [0,-1]]
         
-new_field = Playing_field(numpy.array([['E','E', 'E', 'G'],\
-                                       ['E','O', 'E', 'P'],\
-                                       ['E','E', 'E', 'E']], dtype=object))
+# open specified file
+with open(input("Enter Filename: ")) as input_file:
+    input_grid = input_file.readlines()
+    line_length = len(input_grid[0].split())
+    field = numpy.empty([len(input_grid), line_length], dtype=object)
+    # write each entry of the grid world in a 2x2 array
+    for i in range (len(input_grid)):
+        line = input_grid[i].split()
+        for j in range(len(line)):
+            field[i][j] = line[j]
+new_field = Playing_field(field)
 new_field.print_field() 
 new_field.step()
-new_field.print_field() 
-new_field.step()
+new_field.print_field()
+for x in range (50):
+    new_field.step()
 new_field.print_field()   
     
