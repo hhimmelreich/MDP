@@ -105,7 +105,7 @@ class Playing_field:
         update_policy(self)
     
     '''
-    takes a direction as input and gives back the neighbours, represented as change
+    Takes a direction as input and gives back the neighbours, represented as change
     in coordinates
     '''    
     def neighbours(dir):
